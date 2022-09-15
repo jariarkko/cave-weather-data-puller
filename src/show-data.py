@@ -62,10 +62,11 @@ def dfreplacevalle(df,col,val,newval):
     
 def read_netcdf_file(file_location):
     f = netCDF4.Dataset(file_location) # This the python package I used to open the nc file
-    #print("Variables: ")
-    #print(f.variables)
+    print("Variables: ")
+    print(f.variables)
     t2m = f.variables['t2m'][:].flatten()
     precip = f.variables['cp'][:].flatten()
+    runoff = f.variables['mror'][:].flatten()
     time = f.variables['time'][:].flatten()
     start_time = datetime.strptime("01/01/1900 00:00", "%d/%m/%Y %H:%M")
     date_points = []
@@ -74,15 +75,13 @@ def read_netcdf_file(file_location):
         hours_from_start_time = start_time + timedelta(hours=int(time.data[x]))
         date_part = hours_from_start_time.strftime("%Y/%m/%d")
         time_part = hours_from_start_time.strftime("%H:%M:%S")
-        #split_time = hours_from_start_time.split();
-        #date_part = split_time[0]
-        #time_part = split_time[1]
         date_points.append(date_part)
         time_points.append(time_part)
 
     values = pd.DataFrame({
         "t2m"    : [x-273.15 for x in t2m.data if x!= -32767], # As we said the values are in Kelvin, to convert in Celsius we have to subtract 273.15
         "precip" : precip,
+        "runoff"   : runoff,
         "date"   : date_points,
         "time"   : time_points
         })
@@ -105,6 +104,11 @@ def avgtemp(values):
     final_max_values = daily_max_values.loc[:, ["t2m"]]
     final_max_values.rename(columns={'t2m': 'max t2m'}, inplace=True)
     return(pd.merge(pd.merge(final_min_values,final_avg_values,on="date"),final_max_values,on="date"))
+
+def avgrunoff(values):
+    daily_values = values.groupby("date").mean("runoff")
+    final_values = daily_values.loc[:, ["runoff"]]
+    return(final_values)
 
 def main():
     mode = "temperature"
