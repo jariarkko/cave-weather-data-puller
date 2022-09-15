@@ -58,7 +58,7 @@ def dfreplacevalle(df,col,val,newval):
         if (df.iloc[row,col] <= val):
             df.iloc[row,col] = newval
             count = count+1
-    print("replaced " + str(count) + " occurrences")
+    #print("replaced " + str(count) + " occurrences")
     
 def read_netcdf_file(file_location):
     f = netCDF4.Dataset(file_location) # This the python package I used to open the nc file
@@ -137,7 +137,7 @@ def main():
     # Inner function 'processargs'
     #
     def processargs():
-        print("Processing arguments...")
+        #print("Processing arguments...")
         #print(f"Arguments count: {len(sys.argv)}")
         nonlocal file_name
         file_name_set = 0
