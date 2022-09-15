@@ -65,14 +65,24 @@ def getdata(year, month, day, area, time, file_location):
 def main():
     latitude  = "69.232023" # Njiellalanjävri
     longitude = "21.420556"
-    yearargs = 0
     ystart = 2019 # latest year in the database
     yend = ystart
     months = ["01","02","03","04","05","06","07","08","09","10","11","12"] # all months
     #
+    # Inner function 'constructyeartable'
+    #
+    def constructyeartable(ystart,yend):
+        tab = []
+        for year in range(ystart,yend+1):
+            tab.append(str(year))
+        return(tab)
+    #
     # Inner function 'processoption'
     #
     def processoption(opt,i,argv):
+        nonlocal months
+        nonlocal latitude; 
+        nonlocal longitude;
         if (opt == "--month"):
             if (i + 1 >= len(argv)):
                 fatalerr("Expected an argument to follow --month option")
@@ -83,7 +93,7 @@ def main():
             if (i + 2 >= len(argv)):
                 fatalerr("Expected an argument to follow --coordinates option")
             latitude = num(argv[i+1])
-            longitude = num(argv[i+2])
+            longitude= num(argv[i+2])
             return(2)
         else:
             fatalerr("Unrecognised option " + opt)
@@ -92,62 +102,68 @@ def main():
     # Inner function 'processargs'
     #
     def processargs():
-        print("processing arguments...")
-        print(f"Arguments count: {len(sys.argv)}")
+        print("Processing arguments...")
+        #print(f"Arguments count: {len(sys.argv)}")
+        nonlocal ystart;
+        nonlocal yend;
+        yearargs = 0
         skipn = 0
         for i, arg in enumerate(sys.argv):
-            print("Processing argument " + arg)
-            if (skipn > 0):
+            #print("Processing argument " + arg)
+            if (i == 0):
+                continue
+            elif (skipn > 0):
                 skipn = skipn - 1
-                print("Skipped an argument")
+                #print("Skipped an argument")
             else:
                 if (isoption(arg)):
                     skipn = processoption(arg,i,sys.argv)
                 else:
                     if (yearargs == 0):
-                        ystart = yend = int(arg)
+                        ystart = int(arg)
+                        yend = ystart
                         yearargs = 1
                     elif (yearargs == 1):
                         yend = int(arg)
                         yearargs = 2
                     else:
                         fatalerr("Too many arguments")
-        print("processed arguments...")
+        #print("processed arguments...")
     #
     # Back to the main function
     #
     processargs()
     #
+    # Set up the parameters
     #
-
-full = 0
-if full != 0:
-    years = ["2016","2017","2018","2019"]
-    months = ["01","02","03","04","05","06","07","08","09","10","11","12"]
-else:
-    years = ["2019"]
-    months = ["04"]
-
-print("Getting data from " + str(ystart) + " to " + str(yend) + " now...")
-
-# Let's proceed with the request of the data:
-file_location = getdata(
-    year  = years,
+    years = constructyeartable(ystart,yend)
+    file_name = 'data-' + str(ystart) + "-" + str(yend) + ".nc"
+    #
+    # Now actually getting the data
+    #
+    print("Getting data from " + str(ystart) + " to " + str(yend) + " now...")
+    print("Years = " + str(years))
+    print("Months = " + str(months))
+    print("File_name = " + file_name)
+    file_location = getdata(
+        year  = years,
     
-    # NB: Single digits days or months must have 0s in front or that will cause an error
-    day   = ['01', '02', '03','04', '05', '06','07','08','09','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31'],
-    month = months,
+        # NB: Single digits days or months must have 0s in front or that will cause an error
+        day   = ['01', '02', '03','04', '05', '06','07','08','09','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31'],
+        month = months,
     
-    # The ERA5 accept rectangular shape grid as a searching areas
-    # but we can use also input a point with this system:ß
-    area  = latitude +'/'+ longitude +'/'+ latitude +'/'+ longitude,
+        # The ERA5 accept rectangular shape grid as a searching areas
+        # but we can use also input a point with this system:ß
+        area  = latitude +'/'+ longitude +'/'+ latitude +'/'+ longitude,
 
-    # Get all hours to get the precipation data right
-    time = ['00:00','01:00','02:00','03:00','04:00','05:00','06:00','07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00','23:00',],
-    # We can request one per each day
-    # time  = ['14:00'], # noon in Finland
-    file_location = 'data.nc')
+        # Get all hours to get the precipation data right
+        time = ['00:00','01:00','02:00','03:00','04:00','05:00','06:00','07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00','23:00',],
+        # We can request one per each day
+        # time  = ['14:00'], # noon in Finland
+        file_location = file_name)
+    #
+    # Done!
+    #
+    print("Done")
 
-print("Done")
-
-
+main()
