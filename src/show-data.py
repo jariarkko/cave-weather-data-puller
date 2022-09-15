@@ -62,8 +62,8 @@ def dfreplacevalle(df,col,val,newval):
     
 def read_netcdf_file(file_location):
     f = netCDF4.Dataset(file_location) # This the python package I used to open the nc file
-    print("Variables: ")
-    print(f.variables)
+    #print("Variables: ")
+    #print(f.variables)
     t2m = f.variables['t2m'][:].flatten()
     precip = f.variables['cp'][:].flatten()
     runoff = f.variables['mror'][:].flatten()
