@@ -10,8 +10,10 @@
 # neither year value is provided, by default the command pulls just
 # the year 2019.
 #
-# The command writes its output to a file data-ystart-yend.nc. You may
-# later use the show-data.py program to print out the pulled data.
+# The command writes its output to a file data-ystart-yend.nc. If only
+# some months were selected, then the file name will end in either
+# -month.nc or -month-month.nc. You may later use the show-data.py
+# program to print out the pulled data.
 #
 # The pull-data.py command may also invoked with options:
 #
@@ -95,8 +97,8 @@ def main():
         elif (opt == "--months"):
             if (i + 2 >= len(argv)):
                 fatalerr("Expected an argument to follow --month option")
-            monthfrom = num(argv[i+1])
-            monthto = num(argv[i+2])
+            monthfrom = int(argv[i+1])
+            monthto = int(argv[i+2])
             months = []
             for month in range(monthfrom,monthto+1):
                 if (month < 10):
@@ -108,8 +110,8 @@ def main():
         elif (opt == "--coordinates"):
             if (i + 2 >= len(argv)):
                 fatalerr("Expected an argument to follow --coordinates option")
-            latitude = num(argv[i+1])
-            longitude= num(argv[i+2])
+            latitude = float(argv[i+1])
+            longitude= float(argv[i+2])
             return(2)
         else:
             fatalerr("Unrecognised option " + opt)
@@ -153,7 +155,13 @@ def main():
     # Set up the parameters
     #
     years = constructyeartable(ystart,yend)
-    file_name = 'data-' + str(ystart) + "-" + str(yend) + ".nc"
+    if (len(months) == 12):
+        monthpart = ""
+    elif (len(months) == 1):
+        monthpart = "-" + months[0]
+    else:
+        monthpart = "-" + months[0] + "-" + months[len(months)-1]
+    file_name = 'data-' + str(ystart) + "-" + str(yend) + monthpart + ".nc"
     #
     # Now actually getting the data
     #
