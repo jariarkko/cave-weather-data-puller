@@ -15,10 +15,13 @@
 #
 # The possible options are:
 #
+#   --text             Use textual, human-readable output format. This is
+#                      the default.
+#   --csv              Use CSV (comma-separated-values) format for output.
 #   --full             Print everything in the original input tables
 #                      (for debugging etc)
-#   --combined         Print precipation, temperature, and runoff
-#                      as daily values.
+#   --combined         Print precipation, temperature, evaporation, snow
+#                      evaporation, runoff, and snow depth as daily values.
 #   --precipitation    Print data about precipitation, tabulated
 #                      as daily preciptation -- rain or snow --
 #                      in meters. For instance, 0.001 means 1mm
@@ -33,6 +36,13 @@
 #   --evaporation      Print data about daily evaporation. This is in
 #                      meters, 0.0001 means 1mm water equivalent
 #                      evaporation.
+#   --snowevaporation  Print data about daily evaporation of snow. This
+#                      is in meters, 0.0001 means 1mm water equivalent
+#                      evaporation.
+#   --snowdepth        Print data about snow depth. The depth is
+#                      represented by meters of water that the snow
+#                      covering the area would melt as, if the snow
+#                      were turned into water.
 #   --debug            Turn on debugging printouts.
 #
 
@@ -101,6 +111,8 @@ def read_netcdf_files(file_locations):
     runoff = []
     runoffrate = []
     evaporation = []
+    snowevaporation = []
+    snowdepth = []
     time = []
     start_time = datetime.strptime("01/01/1900 00:00", "%d/%m/%Y %H:%M")
     date_points = []
@@ -117,6 +129,8 @@ def read_netcdf_files(file_locations):
         runoff += cdgetcol(f,'ro')
         runoffrate += cdgetcol(f,'mror')
         evaporation += cdgetcol(f,'e')
+        snowevaporation += cdgetcol(f,'es')
+        snowdepth += cdgetcol(f,'sd')
         thistime = cdgetcol(f,'time')
         time += thistime
         for x in range(len(thistime)):
@@ -135,6 +149,8 @@ def read_netcdf_files(file_locations):
         printdebug("runoffrate len " + str(len(runoffrate)))
         printdebug("evaporation len " + str(len(evaporation)))
         printdebug("evaporation list " + str(evaporation))
+        printdebug("snowevaporation len " + str(len(snowevaporation)))
+        printdebug("snowdepth len " + str(len(snowdepth)))
         #printdebug(f)
     values = pd.DataFrame({
         # Convert temperatures from Kelvin to Celsius, i.e., subtract 273.15
@@ -144,6 +160,8 @@ def read_netcdf_files(file_locations):
         "runoff"      : runoff,
         "runoffrate"  : runoffrate,
         "evap"        : evaporation,
+        "snowevap"    : snowevaporation,
+        "snowdepth"   : snowdepth,
         "date"        : date_points,
         "time"        : time_points
         })
@@ -163,6 +181,13 @@ def sumevap(values):
     dfreplacevaleq(final_values,0,invalid2,0.0)
     return(final_values)
 
+def sumsnowevap(values):
+    summed_values = values.groupby("date").sum("se")
+    final_values = summed_values.loc[:, ["snowevap"]]
+    dfreplacevaleq(final_values,0,invalid1,0.0)
+    dfreplacevaleq(final_values,0,invalid2,0.0)
+    return(final_values)
+
 def avgtemp(values):
     daily_min_values = values.groupby("date").min("t2m")
     daily_avg_values = values.groupby("date").mean("t2m")
@@ -173,7 +198,7 @@ def avgtemp(values):
     final_avg_values.rename(columns={'t2m': 'avg t2m'}, inplace=True)
     final_max_values = daily_max_values.loc[:, ["t2m"]]
     final_max_values.rename(columns={'t2m': 'max t2m'}, inplace=True)
-    return(dfmergebydate(dfmergebydate(final_min_values,final_avg_values),final_max_values))
+    return(dfmergebydate3(final_min_values,final_avg_values,final_max_values))
 
 def sumrunoff(values):
     summed_values = values.groupby("date").sum("runoff")
@@ -187,19 +212,47 @@ def avgrunoffrate(values):
     final_values = daily_values.loc[:, ["runoffrate"]]
     return(final_values)
 
+def avgsnowdepth(values):
+    daily_values = values.groupby("date").mean("snowdepth")
+    final_values = daily_values.loc[:, ["snowdepth"]]
+    return(final_values)
+
 def combined(values):
     precip_values = sumprecip(values)
     evap_values = sumevap(values)
+    snowevap_values = sumsnowevap(values)
     runoff_values = sumrunoff(values)
+    snowdepth_values = avgsnowdepth(values)
     temp_values = avgtemp(values)
-    return(dfmergebydate(dfmergebydate(precip_values,evap_values),
-                         dfmergebydate(runoff_values,temp_values)))
+    return(dfmergebydate6(precip_values,
+                          evap_values,
+                          snowevap_values,
+                          runoff_values,
+                          temp_values,
+                          snowdepth_values))
 
-def dfmergebydate(df1,df2):
+def dfmergebydate2(df1,df2):
     return(pd.merge(df1,df2,on="date"))
+
+def dfmergebydate3(df1,df2,df3):
+    return(dfmergebydate2(dfmergebydate2(df1,df2),
+                          df3))
+
+def dfmergebydate4(df1,df2,df3,df4):
+    return(dfmergebydate2(dfmergebydate2(df1,df2),
+                          dfmergebydate2(df3,df4)))
+
+def dfmergebydate5(df1,df2,df3,df4,df5):
+    return(dfmergebydate2(dfmergebydate4(df1,df2,df3,df4),
+                          df5))
+
+def dfmergebydate6(df1,df2,df3,df4,df5,df6):
+    return(dfmergebydate2(dfmergebydate5(df1,df2,df3,df4,df5),
+                          df6))
 
 def main():
     mode = "combined"
+    csv = 0
     file_names = ["data.nc"]
     file_names_given = 0
     #
@@ -226,8 +279,20 @@ def main():
         elif (opt == "--evaporation"):
             mode = "evaporation"
             return(0)
+        elif (opt == "--snowevaporation"):
+            mode = "snowevaporation"
+            return(0)
+        elif (opt == "--snowdepth"):
+            mode = "snowdepth"
+            return(0)
         elif (opt == "--combined"):
             mode = "combined"
+            return(0)
+        elif (opt == "--text"):
+            csv = 0
+            return(0)
+        elif (opt == "--csv"):
+            csv = 1
             return(0)
         elif (opt == "--debug"):
             debug = 1
@@ -265,29 +330,42 @@ def main():
     #
     processargs()
     #
+    # Decide output format
+    #
+    if (csv):
+        useformat = "tsv"
+    else:
+        useformat = "simple"
+    #
     # Do the main function
     #
     weather_data = read_netcdf_files(file_names)
     if (mode == "full"):
-        print(tabulate(weather_data, headers = 'keys'))
+        print(tabulate(weather_data, headers = 'keys', tablefmt = useformat))
     elif (mode == "precipitation"):
         processed_data = sumprecip(weather_data)
-        print(tabulate(processed_data, headers = 'keys'))
+        print(tabulate(processed_data, headers = 'keys', tablefmt = useformat))
     elif (mode == "temperature"):
         processed_data = avgtemp(weather_data)
-        print(tabulate(processed_data, headers = 'keys'))
+        print(tabulate(processed_data, headers = 'keys', tablefmt = useformat))
     elif (mode == "runoff"):
         processed_data = sumrunoff(weather_data)
-        print(tabulate(processed_data, headers = 'keys'))
+        print(tabulate(processed_data, headers = 'keys', tablefmt = useformat))
     elif (mode == "runoffrate"):
         processed_data = avgrunoffrate(weather_data)
-        print(tabulate(processed_data, headers = 'keys'))
+        print(tabulate(processed_data, headers = 'keys', tablefmt = useformat))
     elif (mode == "evaporation"):
         processed_data = sumevap(weather_data)
-        print(tabulate(processed_data, headers = 'keys'))
+        print(tabulate(processed_data, headers = 'keys', tablefmt = useformat))
+    elif (mode == "snowevaporation"):
+        processed_data = sumsnowevap(weather_data)
+        print(tabulate(processed_data, headers = 'keys', tablefmt = useformat))
+    elif (mode == "snowdepth"):
+        processed_data = avgsnowdepth(weather_data)
+        print(tabulate(processed_data, headers = 'keys', tablefmt = useformat))
     elif (mode == "combined"):
         processed_data = combined(weather_data)
-        print(tabulate(processed_data, headers = 'keys'))
+        print(tabulate(processed_data, headers = 'keys', tablefmt = useformat))
     else:
         fatalerr("Invalid mode " + mode)
 
