@@ -18,6 +18,9 @@
 #   --month nn             Pull only month nn (expressed as a two-digit
 #                          month number)
 #
+#   --months nn mm         Pull month nn to mm (expressed as a two-digit
+#                          month numbers)
+#
 #   --coordinates lat lon  Use the coordinates 'lat' and 'lon'. By 
 #                          default the command uses the corodinates of
 #                          Njiellalanjävri in northern Finland.
@@ -51,7 +54,7 @@ def getdata(year, month, day, area, time, file_location):
     c.retrieve(
         'reanalysis-era5-single-levels',{
             'product_type':'reanalysis', # This is the dataset produced by the CDS
-            'variable':['2m_temperature','convective_precipitation','mean_runoff_rate'],
+            'variable':['2m_temperature','convective_precipitation','runoff','mean_runoff_rate','evaporation'],
             'year': year,
             'month': month,
             'day': day,
@@ -89,6 +92,19 @@ def main():
             month = argv[i+1]
             months = [month]
             return(1)
+        elif (opt == "--months"):
+            if (i + 2 >= len(argv)):
+                fatalerr("Expected an argument to follow --month option")
+            monthfrom = num(argv[i+1])
+            monthto = num(argv[i+2])
+            months = []
+            for month in range(monthfrom,monthto+1):
+                if (month < 10):
+                    thismonth = "0" + str(month)
+                else:
+                    thismonth = str(month)
+                months.append(thismonth)
+            return(2)
         elif (opt == "--coordinates"):
             if (i + 2 >= len(argv)):
                 fatalerr("Expected an argument to follow --coordinates option")

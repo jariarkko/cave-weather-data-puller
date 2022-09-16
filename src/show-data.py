@@ -8,12 +8,15 @@
 # are used to control what is printed, e.g., precipation, temperature, etc.
 #
 # If no arguments are given, the file is assumed to be data.nc. If no
-# options are given, the software behaves as if --temperature option was
-# specified, i.e., daily temperatures from the data are shown.
+# options are given, the software behaves as if --combined option was
+# specified, i.e., daily main values are summarized from the input data.
 #
 # The possible options are:
 #
-#   --full             Print everything (for debugging etc)
+#   --full             Print everything in the original input tables
+#                      (for debugging etc)
+#   --combined         Print precipation, temperature, and runoff
+#                      as daily values.
 #   --precipitation    Print data about precipitation, tabulated
 #                      as daily preciptation -- rain or snow --
 #                      in meters. For instance, 0.001 means 1mm
@@ -21,8 +24,14 @@
 #   --temperature      Print data about temperature, as daily min,
 #                      avg, and max temperatures. Values are in C.
 #                      This is the default mode.
-#   --runoff           Print data about average daily surface runoff.
-#                      This is a rate, i.e., kg / (m^2 s^1).
+#   --runoff           Print data about daily surface runoff. This
+#                      is in meters, 0.0001 means 1mm runoff.
+#   --runoffrate       Print data about average daily surface runoff
+#                      rate, i.e., kg / (m^2 s^1).
+#   --evaporation      Print data about daily evaporation. This is in
+#                      meters, 0.0001 means 1mm water equivalent
+#                      evaporation.
+#   --debug            Turn on debugging printouts.
 #
 
 import sys
@@ -36,10 +45,16 @@ from datetime import datetime, timedelta
 import pandas as pd
 from tabulate import tabulate
 
+debug = 0
+
 def fatalerr(x):
     print("Fatal error: " + x + " -- exit")
     SystemExit(1)
-    
+
+def printdebug(x):
+    if (debug != 0):
+        print(x)
+        
 def isoption(x):
     if (len(x) > 0 and x[0] == '-'):
         return(1)
@@ -62,11 +77,13 @@ def dfreplacevalle(df,col,val,newval):
     
 def read_netcdf_file(file_location):
     f = netCDF4.Dataset(file_location) # This the python package I used to open the nc file
-    #print("Variables: ")
-    #print(f.variables)
+    printdebug("Variables: ")
+    printdebug(f.variables)
     t2m = f.variables['t2m'][:].flatten()
     precip = f.variables['cp'][:].flatten()
-    runoff = f.variables['mror'][:].flatten()
+    runoff = f.variables['ro'][:].flatten()
+    runoffrate = f.variables['mror'][:].flatten()
+    evaporation = f.variables['e'][:].flatten()
     time = f.variables['time'][:].flatten()
     start_time = datetime.strptime("01/01/1900 00:00", "%d/%m/%Y %H:%M")
     date_points = []
@@ -77,13 +94,23 @@ def read_netcdf_file(file_location):
         time_part = hours_from_start_time.strftime("%H:%M:%S")
         date_points.append(date_part)
         time_points.append(time_part)
-
+    printdebug("date len " + str(len(date_points)))
+    printdebug("time len " + str(len(time_points)))
+    printdebug("t2m len " + str(len(t2m)))
+    printdebug("precip len " + str(len(precip)))
+    printdebug("runoff len " + str(len(runoff)))
+    printdebug("runoffrate len " + str(len(runoffrate)))
+    printdebug("evaporation len " + str(len(evaporation)))
+    print(f)
     values = pd.DataFrame({
-        "t2m"    : [x-273.15 for x in t2m.data if x!= -32767], # As we said the values are in Kelvin, to convert in Celsius we have to subtract 273.15
-        "precip" : precip,
-        "runoff"   : runoff,
-        "date"   : date_points,
-        "time"   : time_points
+        # Convert temperatures from Kelvin to Celsius, i.e., subtract 273.15
+        "t2m"    : [x-273.15 for x in t2m.data if x!= -32767],
+        "precip"      : precip,
+        "runoff"      : runoff,
+        "runoffrate"  : runoffrate,
+        "evap"        : evaporation,
+        "date"        : date_points,
+        "time"        : time_points
         })
     return(values)
 
@@ -91,6 +118,11 @@ def sumprecip(values):
     summed_values = values.groupby("date").sum("cp")
     final_values = summed_values.loc[:, ["precip"]]
     dfreplacevalle(final_values,0,-5.20417e-18,0.0)
+    return(final_values)
+
+def sumevap(values):
+    summed_values = values.groupby("date").sum("e")
+    final_values = summed_values.loc[:, ["evap"]]
     return(final_values)
 
 def avgtemp(values):
@@ -103,21 +135,30 @@ def avgtemp(values):
     final_avg_values.rename(columns={'t2m': 'avg t2m'}, inplace=True)
     final_max_values = daily_max_values.loc[:, ["t2m"]]
     final_max_values.rename(columns={'t2m': 'max t2m'}, inplace=True)
-    return(pd.merge(pd.merge(final_min_values,final_avg_values,on="date"),final_max_values,on="date"))
+    return(dfmergebydate(dfmergebydate(final_min_values,final_avg_values),final_max_values))
 
-def avgrunoff(values):
-    daily_values = values.groupby("date").mean("runoff")
-    final_values = daily_values.loc[:, ["runoff"]]
+def sumrunoff(values):
+    summed_values = values.groupby("date").sum("runoff")
+    final_values = summed_values.loc[:, ["runoff"]]
     return(final_values)
 
+def avgrunoffrate(values):
+    daily_values = values.groupby("date").mean("runoffrate")
+    final_values = daily_values.loc[:, ["runoffrate"]]
+    return(final_values)
+
+def dfmergebydate(df1,df2):
+    return(pd.merge(df1,df2,on="date"))
+
 def main():
-    mode = "temperature"
+    mode = "combined"
     file_name = "data.nc"
     #
     # Inner function 'processoption'
     #
     def processoption(opt,i,argv):
         nonlocal mode
+        global debug
         if (opt == "--temperature"):
             mode = "temperature"
             return(0)
@@ -129,6 +170,18 @@ def main():
             return(0)
         elif (opt == "--runoff"):
             mode = "runoff"
+            return(0)
+        elif (opt == "--runoffrate"):
+            mode = "runoffrate"
+            return(0)
+        elif (opt == "--evaporation"):
+            mode = "evaporation"
+            return(0)
+        elif (opt == "--combined"):
+            mode = "combined"
+            return(0)
+        elif (opt == "--debug"):
+            debug = 1
             return(0)
         else:
             fatalerr("Unrecognised option " + opt)
@@ -174,7 +227,16 @@ def main():
         processed_data = avgtemp(weather_data)
         print(tabulate(processed_data, headers = 'keys'))
     elif (mode == "runoff"):
-        processed_data = avgrunoff(weather_data)
+        processed_data = sumrunoff(weather_data)
+        print(tabulate(processed_data, headers = 'keys'))
+    elif (mode == "runoffrate"):
+        processed_data = avgrunoffrate(weather_data)
+        print(tabulate(processed_data, headers = 'keys'))
+    elif (mode == "evaporation"):
+        processed_data = sumevaporation(weather_data)
+        print(tabulate(processed_data, headers = 'keys'))
+    elif (mode == "combined"):
+        processed_data = combined(weather_data)
         print(tabulate(processed_data, headers = 'keys'))
     else:
         fatalerr("Invalid mode " + mode)
