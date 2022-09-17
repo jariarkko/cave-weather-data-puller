@@ -281,38 +281,55 @@ def nicetabulate(df,csv):
     return(result)
 
 def dfplot(df):
-    plt.figure(figsize=(17,6))
+    #
+    # Subfunction for configuring plot axis
+    def configureaxes(ax):
+        ax.tick_params(axis ='x', rotation = 90)
+        ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1)))
+        ax.xaxis.set_minor_locator(mdates.MonthLocator())
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+        for label in ax.get_xticklabels(which='major'):
+            label.set(rotation=30, horizontalalignment='right')
+    #
+    # dfplat continues here
+    #
+    fig = plt.figure(figsize=(17,6))
     plt.xlabel("Date");
-    plt.tick_params(axis ='x', rotation = 90)
-    #plt.xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1, 7)))
-    #plt.xaxis.set_minor_locator(mdates.MonthLocator())
     for col in df.columns:
         if (col == "min t2m" or col == "max t2m"):
-            sns.lineplot(data = df, x= 'date', y=col,
-                    color='red',
-                    linewidth=0.5,
-                    linestyle='--')
+            ax = sns.lineplot(data = df, x= 'date', y=col,
+                              color='red',
+                              linewidth=0.5,
+                              linestyle='--')
+            configureaxes(ax)
         if (col == "avg t2m"):
-            sns.lineplot(data = df, x= 'date', y=col,
-                         color='red')
+            ax = sns.lineplot(data = df, x= 'date', y=col,
+                              color='red')
+            configureaxes(ax)
         if (col == "precip"):
-            sns.lineplot(data = df, x= 'date', y=col,
-                         color='blue')
+            ax = sns.lineplot(data = df, x= 'date', y=col,
+                              color='blue')
+            configureaxes(ax)
         if (col == "snowdepth"):
-            sns.lineplot(data = df, x= 'date', y=col,
-                         color='black')
+            ax = sns.lineplot(data = df, x= 'date', y=col,
+                              color='black')
+            configureaxes(ax)
         if (col == "runoff"):
-            sns.lineplot(data = df, x= 'date', y=col,
-                         color='green')
+            ax = sns.lineplot(data = df, x= 'date', y=col,
+                              color='green')
+            configureaxes(ax)
         if (col == "evap"):
-            sns.lineplot(data = df, x= 'date', y=col,
-                         color='yellow')
+            ax = sns.lineplot(data = df, x= 'date', y=col,
+                              color='yellow')
+            configureaxes(ax)
         if (col == "evap"):
-            sns.lineplot(data = df, x= 'date', y=col,
-                         color='grey')
+            ax = sns.lineplot(data = df, x= 'date', y=col,
+                            color='grey')
+            configureaxes(ax)
         if (col == "snowevap"):
-            sns.lineplot(data = df, x= 'date', y=col,
-                         color='yellow')
+            ax = sns.lineplot(data = df, x= 'date', y=col,
+                              color='yellow')
+            configureaxes(ax)
     plt.show()
 
 def main():
