@@ -43,6 +43,7 @@
 #                      represented by meters of water that the snow
 #                      covering the area would melt as, if the snow
 #                      were turned into water.
+#   --plot             Plot the selected graph as graphics.
 #   --debug            Turn on debugging printouts.
 #
 
@@ -52,6 +53,8 @@ import netCDF4
 from netCDF4 import num2date
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import matplotlib.cbook as cbook
 import seaborn as sns
 from datetime import datetime, timedelta
 import pandas as pd
@@ -277,8 +280,44 @@ def nicetabulate(df,csv):
     #
     return(result)
 
+def dfplot(df):
+    plt.figure(figsize=(17,6))
+    plt.xlabel("Date");
+    plt.tick_params(axis ='x', rotation = 90)
+    #plt.xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1, 7)))
+    #plt.xaxis.set_minor_locator(mdates.MonthLocator())
+    for col in df.columns:
+        if (col == "min t2m" or col == "max t2m"):
+            sns.lineplot(data = df, x= 'date', y=col,
+                    color='red',
+                    linewidth=0.5,
+                    linestyle='--')
+        if (col == "avg t2m"):
+            sns.lineplot(data = df, x= 'date', y=col,
+                         color='red')
+        if (col == "precip"):
+            sns.lineplot(data = df, x= 'date', y=col,
+                         color='blue')
+        if (col == "snowdepth"):
+            sns.lineplot(data = df, x= 'date', y=col,
+                         color='black')
+        if (col == "runoff"):
+            sns.lineplot(data = df, x= 'date', y=col,
+                         color='green')
+        if (col == "evap"):
+            sns.lineplot(data = df, x= 'date', y=col,
+                         color='yellow')
+        if (col == "evap"):
+            sns.lineplot(data = df, x= 'date', y=col,
+                         color='grey')
+        if (col == "snowevap"):
+            sns.lineplot(data = df, x= 'date', y=col,
+                         color='yellow')
+    plt.show()
+
 def main():
     mode = "combined"
+    plot = 0
     csv = 0
     file_names = ["data.nc"]
     file_names_given = 0
@@ -288,6 +327,7 @@ def main():
     def processoption(opt,i,argv):
         nonlocal mode
         nonlocal csv
+        nonlocal plot
         global debug
         if (opt == "--temperature"):
             mode = "temperature"
@@ -324,6 +364,9 @@ def main():
             return(0)
         elif (opt == "--debug"):
             debug = 1
+            return(0)
+        elif (opt == "--plot"):
+            plot = 1
             return(0)
         else:
             fatalerr("Unrecognised option " + opt)
@@ -363,32 +406,29 @@ def main():
     weather_data = read_netcdf_files(file_names)
     if (mode == "full"):
         print(nicetabulate(weather_data, csv))
-    elif (mode == "precipitation"):
-        processed_data = sumprecip(weather_data)
-        print(nicetabulate(processed_data, csv))
-    elif (mode == "temperature"):
-        processed_data = avgtemp(weather_data)
-        print(nicetabulate(processed_data, csv))
-    elif (mode == "runoff"):
-        processed_data = sumrunoff(weather_data)
-        print(nicetabulate(processed_data, csv))
-    elif (mode == "runoffrate"):
-        processed_data = avgrunoffrate(weather_data)
-        print(nicetabulate(processed_data, csv))
-    elif (mode == "evaporation"):
-        processed_data = sumevap(weather_data)
-        print(nicetabulate(processed_data, csv))
-    elif (mode == "snowevaporation"):
-        processed_data = sumsnowevap(weather_data)
-        print(nicetabulate(processed_data, csv))
-    elif (mode == "snowdepth"):
-        processed_data = avgsnowdepth(weather_data)
-        print(nicetabulate(processed_data, csv))
-    elif (mode == "combined"):
-        processed_data = combined(weather_data)
-        print(nicetabulate(processed_data, csv))
     else:
-        fatalerr("Invalid mode " + mode)
+        if (mode == "precipitation"):
+            processed_data = sumprecip(weather_data)
+        elif (mode == "temperature"):
+            processed_data = avgtemp(weather_data)
+        elif (mode == "runoff"):
+            processed_data = sumrunoff(weather_data)
+        elif (mode == "runoffrate"):
+            processed_data = avgrunoffrate(weather_data)
+        elif (mode == "evaporation"):
+            processed_data = sumevap(weather_data)
+        elif (mode == "snowevaporation"):
+            processed_data = sumsnowevap(weather_data)
+        elif (mode == "snowdepth"):
+            processed_data = avgsnowdepth(weather_data)
+        elif (mode == "combined"):
+            processed_data = combined(weather_data)
+        else:
+            fatalerr("Invalid mode " + mode)
+        if (plot != 0):
+            dfplot(processed_data)
+        else:
+            print(nicetabulate(processed_data, csv))
 
 #
 # Call the main program
