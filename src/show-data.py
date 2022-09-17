@@ -257,10 +257,10 @@ def nicetabulate(df,csv):
     # Decide output format
     #
     if (csv):
-        print("doing csv")
+        printdebug("doing csv")
         useformat = "tsv"
     else:
-        print("not doing csv")
+        printdebug("not doing csv")
         useformat = "simple"
     #
     # Do the tabulation
