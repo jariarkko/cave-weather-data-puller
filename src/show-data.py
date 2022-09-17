@@ -152,6 +152,7 @@ def read_netcdf_files(file_locations):
         printdebug("evaporation list " + str(evaporation))
         printdebug("snowevaporation len " + str(len(snowevaporation)))
         printdebug("snowdepth len " + str(len(snowdepth)))
+        f.close()
         #printdebug(f)
     values = pd.DataFrame({
         # Convert temperatures from Kelvin to Celsius, i.e., subtract 273.15
