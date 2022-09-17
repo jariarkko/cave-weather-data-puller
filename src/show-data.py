@@ -56,6 +56,7 @@ import seaborn as sns
 from datetime import datetime, timedelta
 import pandas as pd
 from tabulate import tabulate
+import re
 
 invalid1 = -1.0842e-19
 invalid2 = -5.20417e-18
@@ -250,6 +251,31 @@ def dfmergebydate6(df1,df2,df3,df4,df5,df6):
     return(dfmergebydate2(dfmergebydate5(df1,df2,df3,df4,df5),
                           df6))
 
+def nicetabulate(df,csv):
+    #
+    # Decide output format
+    #
+    if (csv):
+        print("doing csv")
+        useformat = "tsv"
+    else:
+        print("not doing csv")
+        useformat = "simple"
+    #
+    # Do the tabulation
+    #
+    result = tabulate(df, headers = 'keys', tablefmt = useformat)
+    #
+    # Since some versions don't seem to support tsv format, if there's
+    # space left in the input, replace them with commas.
+    #
+    if (csv):
+        result = re.sub(r"[ 	]+",",",result)
+    #
+    # Done!
+    #
+    return(result)
+
 def main():
     mode = "combined"
     csv = 0
@@ -260,6 +286,7 @@ def main():
     #
     def processoption(opt,i,argv):
         nonlocal mode
+        nonlocal csv
         global debug
         if (opt == "--temperature"):
             mode = "temperature"
@@ -330,42 +357,35 @@ def main():
     #
     processargs()
     #
-    # Decide output format
-    #
-    if (csv):
-        useformat = "tsv"
-    else:
-        useformat = "simple"
-    #
     # Do the main function
     #
     weather_data = read_netcdf_files(file_names)
     if (mode == "full"):
-        print(tabulate(weather_data, headers = 'keys', tablefmt = useformat))
+        print(nicetabulate(weather_data, csv))
     elif (mode == "precipitation"):
         processed_data = sumprecip(weather_data)
-        print(tabulate(processed_data, headers = 'keys', tablefmt = useformat))
+        print(nicetabulate(processed_data, csv))
     elif (mode == "temperature"):
         processed_data = avgtemp(weather_data)
-        print(tabulate(processed_data, headers = 'keys', tablefmt = useformat))
+        print(nicetabulate(processed_data, csv))
     elif (mode == "runoff"):
         processed_data = sumrunoff(weather_data)
-        print(tabulate(processed_data, headers = 'keys', tablefmt = useformat))
+        print(nicetabulate(processed_data, csv))
     elif (mode == "runoffrate"):
         processed_data = avgrunoffrate(weather_data)
-        print(tabulate(processed_data, headers = 'keys', tablefmt = useformat))
+        print(nicetabulate(processed_data, csv))
     elif (mode == "evaporation"):
         processed_data = sumevap(weather_data)
-        print(tabulate(processed_data, headers = 'keys', tablefmt = useformat))
+        print(nicetabulate(processed_data, csv))
     elif (mode == "snowevaporation"):
         processed_data = sumsnowevap(weather_data)
-        print(tabulate(processed_data, headers = 'keys', tablefmt = useformat))
+        print(nicetabulate(processed_data, csv))
     elif (mode == "snowdepth"):
         processed_data = avgsnowdepth(weather_data)
-        print(tabulate(processed_data, headers = 'keys', tablefmt = useformat))
+        print(nicetabulate(processed_data, csv))
     elif (mode == "combined"):
         processed_data = combined(weather_data)
-        print(tabulate(processed_data, headers = 'keys', tablefmt = useformat))
+        print(nicetabulate(processed_data, csv))
     else:
         fatalerr("Invalid mode " + mode)
 
