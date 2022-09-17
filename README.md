@@ -1,5 +1,5 @@
 
-# cave-weather-data-puller
+# CAVE WEATHER DATA PULLER
 
 This little tool pulls weather-related data from the EU CDS climate data service.
 

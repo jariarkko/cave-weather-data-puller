@@ -6,7 +6,7 @@ PULLSCRIPT=`echo $COMMANDSCRIPT | sed 's%readusage[.]sh%../src/pull-data.py%'`
 SHOWSCRIPT=`echo $COMMANDSCRIPT | sed 's%readusage[.]sh%../src/show-data.py%'`
 
 echo ""
-echo "# cave-weather-data-puller"
+echo "# CAVE WEATHER DATA PULLER"
 echo ""
 echo "This little tool pulls weather-related data from the EU CDS climate data service."
 echo ""
