@@ -88,6 +88,7 @@ The possible options are:
                        represented by meters of water that the snow
                        covering the area would melt as, if the snow
                        were turned into water.
+    --plot             Plot the selected graph as graphics.
     --debug            Turn on debugging printouts.
 
 
