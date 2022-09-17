@@ -287,7 +287,7 @@ def dfplot(df):
         ax.tick_params(axis ='x', rotation = 90)
         ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1)))
         ax.xaxis.set_minor_locator(mdates.MonthLocator())
-        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+        #ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
         for label in ax.get_xticklabels(which='major'):
             label.set(rotation=30, horizontalalignment='right')
     #
@@ -298,7 +298,7 @@ def dfplot(df):
     for col in df.columns:
         if (col == "min t2m" or col == "max t2m"):
             ax = sns.lineplot(data = df, x= 'date', y=col,
-                              color='red',
+                              color='pink',
                               linewidth=0.5,
                               linestyle='--')
             configureaxes(ax)
