@@ -56,7 +56,7 @@ def getdata(year, month, day, area, time, file_location):
     c.retrieve(
         'reanalysis-era5-single-levels',{
             'product_type':'reanalysis', # This is the dataset produced by the CDS
-            'variable':['2m_temperature','convective_precipitation','runoff','mean_runoff_rate','evaporation','snow_evaporation','snow_depth'],
+            'variable':['2m_temperature','convective_precipitation','runoff','sub_surface_runoff','surface_runoff','mean_runoff_rate','evaporation','snow_evaporation','snow_depth'],
             'year': year,
             'month': month,
             'day': day,

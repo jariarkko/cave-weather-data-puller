@@ -29,7 +29,11 @@
 #   --temperature      Print data about temperature, as daily min,
 #                      avg, and max temperatures. Values are in C.
 #                      This is the default mode.
-#   --runoff           Print data about daily surface runoff. This
+#   --runoff           Print data about daily overall runoff. This
+#                      is in meters, 0.0001 means 1mm runoff.
+#   --surfacerunoff    Print data about daily surface runoff. This
+#                      is in meters, 0.0001 means 1mm runoff.
+#   --subsurfacerunoff Print data about daily sub-surface runoff. This
 #                      is in meters, 0.0001 means 1mm runoff.
 #   --runoffrate       Print data about average daily surface runoff
 #                      rate, i.e., kg / (m^2 s^1).
@@ -63,6 +67,8 @@ import re
 
 invalid1 = -1.0842e-19
 invalid2 = -5.20417e-18
+invalid3 = 2.64698e-23
+invalid4 = 6.35275e-22
 debug = 0
 
 def fatalerr(x):
@@ -113,6 +119,8 @@ def read_netcdf_files(file_locations):
     t2m = []
     precip = []
     runoff = []
+    surfacerunoff = []
+    subsurfacerunoff = []
     runoffrate = []
     evaporation = []
     snowevaporation = []
@@ -131,6 +139,8 @@ def read_netcdf_files(file_locations):
         t2m += cdgetcol(f,'t2m')
         precip += cdgetcol(f,'cp')
         runoff += cdgetcol(f,'ro')
+        surfacerunoff += cdgetcol(f,'sro')
+        subsurfacerunoff += cdgetcol(f,'ssro')
         runoffrate += cdgetcol(f,'mror')
         evaporation += cdgetcol(f,'e')
         snowevaporation += cdgetcol(f,'es')
@@ -150,6 +160,8 @@ def read_netcdf_files(file_locations):
         printdebug("t2m len " + str(len(t2m)))
         printdebug("precip len " + str(len(precip)))
         printdebug("runoff len " + str(len(runoff)))
+        printdebug("surfacerunoff len " + str(len(surfacerunoff)))
+        printdebug("subsurfacerunoff len " + str(len(subsurfacerunoff)))
         printdebug("runoffrate len " + str(len(runoffrate)))
         printdebug("evaporation len " + str(len(evaporation)))
         printdebug("evaporation list " + str(evaporation))
@@ -159,16 +171,18 @@ def read_netcdf_files(file_locations):
         #printdebug(f)
     values = pd.DataFrame({
         # Convert temperatures from Kelvin to Celsius, i.e., subtract 273.15
-        # "t2m"    : [x-273.15 for x in t2m.data if x!= -32767],
-        "t2m"    : [x-273.15 for x in t2m if x!= -32767],
-        "precip"      : precip,
-        "runoff"      : runoff,
-        "runoffrate"  : runoffrate,
-        "evap"        : evaporation,
-        "snowevap"    : snowevaporation,
-        "snowdepth"   : snowdepth,
-        "date"        : date_points,
-        "time"        : time_points
+        # "t2m"            : [x-273.15 for x in t2m.data if x!= -32767],
+        "t2m"              : [x-273.15 for x in t2m if x!= -32767],
+        "precip"           : precip,
+        "runoff"           : runoff,
+        "surfacerunoff"    : surfacerunoff,
+        "subsurfacerunoff" : subsurfacerunoff,
+        "runoffrate"       : runoffrate,
+        "evap"             : evaporation,
+        "snowevap"         : snowevaporation,
+        "snowdepth"        : snowdepth,
+        "date"             : date_points,
+        "time"             : time_points
         })
     return(values)
 
@@ -212,6 +226,24 @@ def sumrunoff(values):
     dfreplacevalle(final_values,0,invalid2,0.0)
     return(final_values)
 
+def sumsurfacerunoff(values):
+    summed_values = values.groupby("date").sum("surfacerunoff")
+    final_values = summed_values.loc[:, ["surfacerunoff"]]
+    dfreplacevalle(final_values,0,invalid1,0.0)
+    dfreplacevalle(final_values,0,invalid2,0.0)
+    dfreplacevalle(final_values,0,invalid3,0.0)
+    dfreplacevalle(final_values,0,invalid4,0.0)
+    return(final_values)
+
+def sumsubsurfacerunoff(values):
+    summed_values = values.groupby("date").sum("subsurfacerunoff")
+    final_values = summed_values.loc[:, ["subsurfacerunoff"]]
+    dfreplacevalle(final_values,0,invalid1,0.0)
+    dfreplacevalle(final_values,0,invalid2,0.0)
+    dfreplacevalle(final_values,0,invalid3,0.0)
+    dfreplacevalle(final_values,0,invalid4,0.0)
+    return(final_values)
+
 def avgrunoffrate(values):
     daily_values = values.groupby("date").mean("runoffrate")
     final_values = daily_values.loc[:, ["runoffrate"]]
@@ -227,12 +259,16 @@ def combined(values):
     evap_values = sumevap(values)
     snowevap_values = sumsnowevap(values)
     runoff_values = sumrunoff(values)
+    surfacerunoff_values = sumsurfacerunoff(values)
+    subsurfacerunoff_values = sumsubsurfacerunoff(values)
     snowdepth_values = avgsnowdepth(values)
     temp_values = avgtemp(values)
-    return(dfmergebydate6(precip_values,
+    return(dfmergebydate8(precip_values,
                           evap_values,
                           snowevap_values,
                           runoff_values,
+                          surfacerunoff_values,
+                          subsurfacerunoff_values,
                           temp_values,
                           snowdepth_values))
 
@@ -254,6 +290,14 @@ def dfmergebydate5(df1,df2,df3,df4,df5):
 def dfmergebydate6(df1,df2,df3,df4,df5,df6):
     return(dfmergebydate2(dfmergebydate5(df1,df2,df3,df4,df5),
                           df6))
+
+def dfmergebydate7(df1,df2,df3,df4,df5,df6,df7):
+    return(dfmergebydate2(dfmergebydate6(df1,df2,df3,df4,df5,df6),
+                          df7))
+
+def dfmergebydate8(df1,df2,df3,df4,df5,df6,df7,df8):
+    return(dfmergebydate2(dfmergebydate7(df1,df2,df3,df4,df5,df6,df7),
+                          df8))
 
 def nicetabulate(df,csv):
     #
@@ -318,6 +362,14 @@ def dfplot(df):
             ax = sns.lineplot(data = df, x= 'date', y=col,
                               color='green')
             configureaxes(ax)
+        if (col == "surfacerunoff"):
+            ax = sns.lineplot(data = df, x= 'date', y=col,
+                              color='green')
+            configureaxes(ax)
+        if (col == "subsurfacerunoff"):
+            ax = sns.lineplot(data = df, x= 'date', y=col,
+                              color='green')
+            configureaxes(ax)
         if (col == "evap"):
             ax = sns.lineplot(data = df, x= 'date', y=col,
                               color='yellow')
@@ -357,6 +409,12 @@ def main():
             return(0)
         elif (opt == "--runoff"):
             mode = "runoff"
+            return(0)
+        elif (opt == "--surfacerunoff"):
+            mode = "surfacerunoff"
+            return(0)
+        elif (opt == "--subsurfacerunoff"):
+            mode = "subsurfacerunoff"
             return(0)
         elif (opt == "--runoffrate"):
             mode = "runoffrate"
@@ -430,6 +488,10 @@ def main():
             processed_data = avgtemp(weather_data)
         elif (mode == "runoff"):
             processed_data = sumrunoff(weather_data)
+        elif (mode == "surfacerunoff"):
+            processed_data = sumsurfacerunoff(weather_data)
+        elif (mode == "subsurfacerunoff"):
+            processed_data = sumsubsurfacerunoff(weather_data)
         elif (mode == "runoffrate"):
             processed_data = avgrunoffrate(weather_data)
         elif (mode == "evaporation"):
